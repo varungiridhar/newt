@@ -2,6 +2,23 @@
 outputs/
 logs/
 .vscode/
+data
+
+# Claude Code
+.claude/
+
+# SLURM
+slurm_out/
+*.out
+
+# Wandb
+wandb/
+
+# Experiment artifacts (data, checkpoints, figures are large / symlinked)
+experiments/**/*.pt
+experiments/**/data/
+experiments/**/checkpoints/
+experiments/**/figures/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
