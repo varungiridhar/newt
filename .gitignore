@@ -1,6 +1,6 @@
 # Newt
-outputs/
-logs/
+**/outputs
+**/logs
 .vscode/
 data
 
