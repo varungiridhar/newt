@@ -46,8 +46,9 @@ class Config:
 	discount_min: float = 0.95								# minimum discount factor
 	discount_max: float = 0.995								# maximum discount factor
 	buffer_size: int = 10_000_000							# replay buffer capacity
-	use_demos: bool = True									# whether to use demonstration data
+	use_demos: bool = False									# whether to use demonstration data (auto-enabled for multitask)
 	demo_steps: int = 200_000								# number of pretraining steps on demonstration data
+	demo_eval_freq: int = 0									# eval/checkpoint frequency during demo pretraining (0=disabled)
 	lr_schedule: Optional[str] = None						# learning rate schedule, one of [None, "warmup"]
 	warmup_steps: int = 5_000								# number of warmup steps for lr schedule
 	seeding_coef: int = 5									# number of random rollouts (per env) to seed the buffer with
@@ -158,12 +159,14 @@ def parse_cfg(cfg):
 	cfg.num_global_tasks = cfg.num_tasks
 	if cfg.task == 'soup':
 		cfg.num_envs = cfg.num_tasks
+		cfg.use_demos = True  # Always use demos for multitask training
 		print(colored(f'Number of tasks in soup: {cfg.num_global_tasks}', 'green', attrs=['bold']))
 	else:
-		cfg.use_demos = False  # Disable demos for single-task training
 		cfg.task_dim = 0  # No task conditioning for single-task training
-	cfg.eval_freq = 20 * 500 * cfg.num_envs
-	cfg.save_freq = 5 * cfg.eval_freq
+	if cfg.eval_freq is None:
+		cfg.eval_freq = 20 * 500 * cfg.num_envs
+	if cfg.save_freq is None:
+		cfg.save_freq = 5 * cfg.eval_freq
 
 	# Warmup LR when pretraining
 	if cfg.use_demos and cfg.checkpoint is None:

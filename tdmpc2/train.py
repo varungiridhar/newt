@@ -176,7 +176,8 @@ def load_demos(
 @hydra.main(version_base=None, config_name="config")
 def launch(cfg: Config):
 	assert torch.cuda.is_available()
-	assert cfg.steps > 0, 'Must train for at least 1 step.'
+	assert cfg.steps > 0 or (cfg.use_demos and cfg.demo_steps > 0), \
+		'Must train for at least 1 step or use demo pretraining.'
 	cfg = parse_cfg(cfg)
 	print(colored('Work dir:', 'yellow', attrs=['bold']), cfg.work_dir)
 

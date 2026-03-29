@@ -196,11 +196,21 @@ class Trainer():
 			self.agent.maxq_pi = False  # Disable max-Q for pretraining
 			print(f'prior_coef is {self.agent.cfg.prior_coef}, setting to 1.0 for pretraining.')
 			self.agent.cfg.prior_coef = 1.0  # Use only behavior cloning loss
+			demo_eval_freq = self.cfg.get('demo_eval_freq', 0)
 			iterator = tqdm(range(self.cfg.demo_steps), desc='Pretraining') if self.cfg.rank == 0 else range(self.cfg.demo_steps)
 			for i in iterator:
 				pretrain_metrics = self.agent.update(self.buffer)
 				if i % int(self.cfg.demo_steps / 50) == 0:
 					self.logger.pprint_pretrain(pretrain_metrics)
+				# Periodic evaluation and checkpointing during pretraining
+				if demo_eval_freq > 0 and (i + 1) % demo_eval_freq == 0:
+					step_id = i + 1
+					if self.cfg.rank == 0:
+						print(f'Pretraining eval at step {step_id:,}...')
+					eval_metrics = self.eval()
+					eval_metrics.update({'step': step_id, 'elapsed_time': time() - self._start_time})
+					self.logger.log(eval_metrics, 'eval')
+					self.logger.save_agent(self.agent, f'{step_id:,}'.replace(',', '_'))
 			pretrain_metrics.update({
 				'step': 0,
 				'elapsed_time': time() - self._start_time,
@@ -210,9 +220,16 @@ class Trainer():
 			print(f'Set prior_coef to {self.agent.cfg.prior_coef} after pretraining.')
 			if self.cfg.rank == 0:
 				print('Pretraining complete.')
-			self.logger.save_agent(self.agent, f'{self._step:,}'.replace(',', '_'))
+			# Save final pretraining checkpoint (unless already saved by demo_eval_freq)
+			if demo_eval_freq == 0 or self.cfg.demo_steps % demo_eval_freq != 0:
+				self.logger.save_agent(self.agent, f'{self.cfg.demo_steps:,}'.replace(',', '_'))
 
 		# Training loop
+		if self.cfg.steps <= 0:
+			if self.cfg.rank == 0:
+				print('No online training steps requested, skipping online training loop.')
+			self.logger.finish(self.agent)
+			return
 		if self.cfg.rank == 0:
 			print(f'Training agent for {self.cfg.steps:,} steps...')
 		train_metrics = defaultdict(list)
@@ -305,4 +322,4 @@ class Trainer():
 					train_metrics.update(_train_metrics)
 					self._update_tokens -= num_updates
 		
-		self.logger.finish()
+		self.logger.finish(self.agent)

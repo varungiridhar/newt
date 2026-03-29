@@ -133,10 +133,12 @@ class Logger:
 		self._eval = []
 		print_run(cfg)
 		import wandb
+		run_id = f"{self._group}-{cfg.seed}-{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
 		wandb.init(
+			id=run_id,
 			project=self.project,
 			entity=self.entity,
-			name=str(cfg.seed),
+			name=str(cfg.exp_name),
 			group=self._group,
 			tags=cfg_to_group(cfg, return_list=True) + [f"seed:{cfg.seed}"],
 			dir=self._log_dir,
